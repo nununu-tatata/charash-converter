@@ -219,7 +219,8 @@ a { color: var(--primary-color); }
 header { flex-wrap: wrap; gap: 12px; }
 .header-right-controls { margin-left: auto; }
 .header-left { display: flex; flex-direction: column; gap: 6px; }
-.related-links { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: var(--fs-small); }
+.related-links { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 6px; font-size: var(--fs-small); }
+.related-label { color: var(--sub-text-color); }
 .related-link { color: var(--primary-color); text-decoration: none; font-weight: 700; }
 .related-link:hover { text-decoration: underline; }
 /* セクション */
