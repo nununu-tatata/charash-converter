@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-NNC080P0Y3"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-NNC080P0Y3');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>保管所→キャラッシュ変換ツール</title>
+    <meta name="description" content="キャラクター保管所（CoC6版）のキャラシを、キャラッシュの「インポート」で読み込めるテキストファイルに変換します。">
+    <meta property="og:title" content="保管所→キャラッシュ変換ツール">
+    <meta property="og:description" content="キャラクター保管所（CoC6版）のキャラシURLを貼るだけで、キャラッシュに取り込めるテキストファイルを作ります。マイリストから一括取得・何百件でもまとめて変換。">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://nununu-tatata.github.io/charash-converter/">
+    <meta property="og:image" content="https://nununu-tatata.github.io/charash-converter/ogp.png">
+    <meta name="twitter:image" content="https://nununu-tatata.github.io/charash-converter/ogp.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@nukonuko_4">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎲</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Zen+Maru+Gothic:wght@700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-left">
+                <h1>保管所→キャラッシュ変換ツール</h1>
+                <p class="subtitle">キャラクター保管所（CoC6版）のキャラシを、キャラッシュに取り込めるテキストファイルに変換します。規約等をご確認の上ご利用ください。</p>
+                <div class="related-links">
+                    <a href="https://nununu-tatata.github.io/charasheet-backup/" target="_blank" class="related-link">🎲CoCキャラシ保管スプレッドシート <span style="font-size:10px;">↗</span></a>
+                    <a href="https://nununu-tatata.github.io/404-tool/" target="_blank" class="related-link">🎲CoCチャパレ＆コマ作成ツール <span style="font-size:10px;">↗</span></a>
+                    <a href="https://nununu-tatata.github.io/log-checker/" target="_blank" class="related-link">🎲CoC成長チェックツール <span style="font-size:10px;">↗</span></a>
+                </div>
+            </div>
+            <div class="header-right-controls">
+                <button id="btn-theme-toggle" class="btn-icon" title="テーマ切替">🌙</button>
+                <button class="disclaimer-btn" onclick="openModal('disclaimerModal')">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
+                    </svg>
+                    規約等
+                </button>
+                <button class="round-btn" onclick="openModal('authorModal')" title="作った人">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                    </svg>
+                </button>
+                <a href="https://forms.gle/K2Lkdcw2akgnDvoVA" target="_blank" class="round-btn" title="お問い合わせ">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
+                    </svg>
+                </a>
+                <div class="share-wrapper">
+                    <button class="round-btn share-main-btn" onclick="toggleShareMenu(event)" title="シェアする">
+                        <svg viewBox="0 0 24 24">
+                            <path
+                                d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z" />
+                        </svg>
+                    </button>
+                    <div class="share-copy-tooltip" id="shareTooltip">リンクをコピーしました</div>
+                    <div id="shareMenu" class="share-menu">
+                        <button class="share-item" onclick="shareCopyLink()">
+                            <svg viewBox="0 0 24 24">
+                                <path
+                                    d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
+                            </svg>
+                            リンクをコピー
+                        </button>
+                        <a href="#" class="share-item" onclick="shareToX(); return false;">
+                            <svg viewBox="0 0 24 24">
+                                <path
+                                    d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                            </svg>
+                            Xでシェア
+                        </a>
+                        <a href="#" class="share-item" onclick="shareToBluesky(); return false;">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="14" height="14"
+                                style="fill: #0085ff;">
+                                <path
+                                    d="M3.468 1.948C5.303 3.325 7.276 6.118 8 7.616c.725-1.498 2.698-4.29 4.532-5.668C13.855.955 16 .186 16 2.632c0 .489-.28 4.105-.444 4.692-.572 2.04-2.653 2.561-4.504 2.246 3.236.551 4.06 2.375 2.281 4.2-3.376 3.464-4.852-.87-5.23-1.98-.07-.204-.103-.3-.103-.218 0-.081-.033.014-.102.218-.379 1.11-1.855 5.444-5.231 1.98-1.778-1.825-.955-3.65 2.28-4.2-1.85.315-3.932-.205-4.503-2.246C.28 6.737 0 3.12 0 2.632 0 .186 2.145.955 3.468 1.948" />
+                            </svg>
+                            Blueskyでシェア
+                        </a>
+                        <a href="#" class="share-item" onclick="shareToMisskey(); return false;">
+                            <svg viewBox="0 0 24 24" style="color:#86b300; fill:currentColor;">
+                                <path
+                                    d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z" />
+                            </svg>
+                            Misskeyでシェア
+                        </a>
+                        <a href="#" class="share-item" onclick="shareToDiscord(); return false;">
+                            <svg viewBox="0 0 24 24" style="color:#5865F2; fill:currentColor;">
+                                <path
+                                    d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
+                            </svg>
+                            Discordでシェア
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- ===== 変換 ===== -->
+        <section class="card">
+            <div class="growing-note">
+                <p class="growing-title">🌱 このツールは成長中です</p>
+                <p>みなさんの声に合わせて、アップデートしていきます。キャラシが多い方は、<b>まず数名分で試してから</b>、全員を変換してください。</p>
+                <p>うまく変換できないキャラシや、ご要望があれば、お気軽に<a href="https://forms.gle/K2Lkdcw2akgnDvoVA" target="_blank">お問い合わせフォーム</a>からお送りください。</p>
+            </div>
+            <p class="card-label">キャラクター保管所のキャラシURL（1行に1つ。何件でもまとめて貼り付けられます）</p>
+            <textarea id="url-input" class="url-input url-area" spellcheck="false"
+                placeholder="https://charasheet.vampire-blood.net/XXXXXXX&#10;https://charasheet.vampire-blood.net/mXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"></textarea>
+            <div class="url-actions">
+                <span id="url-count" class="input-note"></span>
+                <button type="button" id="stop-btn" class="btn-sub" hidden>中止する</button>
+                <button type="button" id="convert-btn" class="btn-convert">変換する</button>
+            </div>
+            <p class="input-note">クトゥルフ神話TRPG 6版のキャラシのみ対応しています。公開しているキャラシだけ読み込めます。<br>
+                マイリストの全キャラのURLをまとめて取得する方法は「<a href="#bookmarklet">マイリストからURLをまとめて取得</a>」をご覧ください。</p>
+
+            <div class="options">
+                <div class="opt-card">
+                    <div class="opt-head">
+                        <span class="opt-title">ふりがなを自動で分ける</span>
+                        <label class="toggle-switch"><input type="checkbox" id="opt-kana" checked><span class="slider"></span></label>
+                    </div>
+                    <p class="opt-desc">「湯出島　楓（ゆでじま　かえで）」→ 名前「湯出島　楓」・かな「ゆでじま　かえで」。名前欄になければ、タイトルやメモの最初のほうからも探します。うまく分けられなかったときは、変換後に1人ずつ直せます。</p>
+                </div>
+                <div class="opt-card">
+                    <div class="opt-head"><span class="opt-title">ふりがなが半角カタカナのとき</span></div>
+                    <div class="segmented">
+                        <label><input type="radio" name="opt-halfkana" value="keep" checked><span>そのまま</span></label>
+                        <label><input type="radio" name="opt-halfkana" value="katakana"><span>全角カタカナ</span></label>
+                        <label><input type="radio" name="opt-halfkana" value="hiragana"><span>ひらがな</span></label>
+                    </div>
+                    <p class="opt-desc">「ﾕﾃﾞｼﾞﾏ ｶｴﾃﾞ」→「ユデジマ カエデ」または「ゆでじま かえで」。もともと全角のふりがなは変えません。</p>
+                </div>
+                <div class="opt-card">
+                    <div class="opt-head">
+                        <span class="opt-title">成長チェックをメモに残す</span>
+                        <label class="toggle-switch"><input type="checkbox" id="opt-growth" checked><span class="slider"></span></label>
+                    </div>
+                    <p class="opt-desc">成長チェックが付いている技能を、別のメモ「成長チェック」にまとめます。いらなければ、キャラッシュでそのメモだけ消せます。</p>
+                </div>
+                <div class="opt-card">
+                    <div class="opt-head"><span class="opt-title">メモの入れ先</span></div>
+                    <div class="segmented">
+                        <label><input type="radio" name="opt-memo" value="common" checked><span>共通メモ</span></label>
+                        <label><input type="radio" name="opt-memo" value="system"><span>6版のシステム別メモ</span></label>
+                    </div>
+                    <p class="opt-desc">共通メモはどのシステムのページにも出ます。システム別メモは6版のページにだけ出ます。</p>
+                </div>
+                <div class="opt-card">
+                    <div class="opt-head">
+                        <span class="opt-title">特徴表を「探索者の特徴」に入れる</span>
+                        <label class="toggle-switch"><input type="checkbox" id="opt-traits" checked><span class="slider"></span></label>
+                    </div>
+                    <p class="opt-desc">メモに書かれた特徴表（【特徴】の見出しや、[〇〇][〇〇] の形など）を探して入れます。見つかったキャラは、採用ルールの「クトゥルフ2015」と「探索者の特徴」にチェックが入ります。変換後に1人ずつ確認・修正できます。</p>
+                </div>
+            </div>
+
+            <div id="message" class="message"></div>
+            <div id="progress" class="progress"></div>
+
+            <div id="result" class="result">
+                <div class="result-head">
+                    <div class="result-meta" id="result-summary"></div>
+                    <div class="result-buttons">
+                        <button class="btn-sub" id="copy-failed-btn" hidden>📋 読み込めなかったURLをコピー</button>
+                        <button class="btn-sub" id="retry-btn" hidden>🔁 読み込めなかったものをもう一度</button>
+                    </div>
+                </div>
+                <div class="zip-area">
+                    <div class="zip-buttons" id="zip-buttons"></div>
+                    <p class="input-note" id="zip-note" hidden>キャラッシュは1回に50人まで取り込めるので、50人ずつのZIPに分けています。1つずつダウンロードして、順番に取り込んでください。</p>
+                </div>
+                <p class="input-note" style="margin-top:0;">名前・かな・タグ・探索者の特徴は、ここで直せます。チェックを外したキャラはZIPに入りません。</p>
+                <div class="tag-panel" id="tag-panel">
+                    <div class="tag-panel-head">
+                        <span class="opt-title">全員のタグ</span>
+                        <button type="button" class="btn-text" id="tag-reset">元に戻す</button>
+                    </div>
+                    <p class="opt-desc">✕を押すと、そのタグを全員から外します。1人だけ外すときは、各キャラのタグの✕を押してください。</p>
+                    <div class="tag-list" id="tag-all"></div>
+                </div>
+                <div class="char-list" id="char-list"></div>
+
+                <div id="preview" class="preview">
+                    <div class="result-head">
+                        <div class="result-name" id="preview-name"></div>
+                        <div class="result-buttons">
+                            <button class="btn-sub" id="copy-btn">📋 コピー</button>
+                            <button class="btn-sub" id="download-btn">💾 このキャラだけダウンロード</button>
+                        </div>
+                    </div>
+                    <textarea id="result-text" class="result-text" readonly></textarea>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== 使い方 ===== -->
+        <section class="section">
+            <h2 class="section-title">使い方</h2>
+            <ol class="steps">
+                <li class="step">
+                    <p class="step-title">キャラシのURLを貼り付けて「変換する」を押す</p>
+                    <p>キャラクター保管所のキャラシのURLを、<b>1行に1つずつ</b>貼り付けます。何件でもまとめて貼り付けられます。</p>
+                    <p>マイリストの全キャラを変換したいときは、「<a href="#bookmarklet">マイリストからURLをまとめて取得</a>」を使うと、URLを1つずつコピーしなくて済みます。</p>
+                    <div class="point-box">
+                        <p class="point-title">⏱ 読み込みには少し時間がかかります</p>
+                        <ul>
+                            <li>キャラクター保管所に負担をかけないよう、<b>1件ずつ間をあけて</b>読み込みます。</li>
+                            <li>目安は <b>100件で約2分</b>、<b>300件で約6分</b>です。</li>
+                            <li><b>300件を超えるとき</b>は、さらにゆっくり（2秒に1件）読み込みます。500件で約17分です。</li>
+                            <li>保管所が混み合っているときは、少し待って<b>自動でやり直します</b>。読み込み中は、このページを開いたままにしてください。</li>
+                        </ul>
+                    </div>
+                </li>
+                <li class="step">
+                    <p class="step-title">名前などを確認する</p>
+                    <p>変換できたキャラが一覧に出ます。必要なら、その場で直せます。</p>
+                    <ul>
+                        <li><b>名前・なまえ（かな）</b>：うまく分かれていないときは、入力欄で直せます</li>
+                        <li><b>タグ</b>：✕で外せます（全員から外すことも、1人だけ外すこともできます）</li>
+                        <li><b>探索者の特徴</b>：メモから見つけた特徴表を確認・修正できます</li>
+                        <li>ZIPに入れたくないキャラは、左のチェックを外します</li>
+                    </ul>
+                </li>
+                <li class="step">
+                    <p class="step-title">ZIPファイルをダウンロードする</p>
+                    <p>「<b>まとめてZIPでダウンロード</b>」を押すと、1キャラ1つのテキストファイルをまとめたZIPファイルができます。1人だけなら「中身を見る」→「このキャラだけダウンロード」でもOKです。</p>
+                    <div class="point-box">
+                        <p class="point-title">🗂 ZIPは50人ずつに分かれます</p>
+                        <p>キャラッシュは<b>1回に50人まで</b>しか取り込めません。そのため50人を超えるときは、「ZIP 1（1〜50人目）」「ZIP 2（51〜100人目）」…のように<b>50人ずつ</b>に分かれます。全部ダウンロードしてください。</p>
+                    </div>
+                </li>
+                <li class="step">
+                    <p class="step-title">キャラッシュで取り込む</p>
+                    <p><a href="https://charash.jp" target="_blank">キャラッシュ</a>にログインし、キャラクター一覧の<b>歯車のメニュー</b>から「<b>インポート</b>」を開きます。</p>
+                    <p>ダウンロードした<b>ZIPファイルをそのまま</b>選び、確認画面で内容を確かめてから取り込みます。ZIPが複数あるときは、<b>1つずつ順番に</b>取り込んでください。</p>
+                    <p>一部のキャラだけ取り込みたいときは、ZIPを解凍して、好きなテキストファイルだけを選んでもOKです。</p>
+                </li>
+            </ol>
+            <div class="note-box">
+                キャラッシュに<b>同じ名前のキャラクター</b>がすでにいる場合は、そのキャラクターにまとめられます（確認画面で「別のキャラクターとして作成」も選べます）。まとめるときは、キャラッシュ側に入っている値が優先されます。
+            </div>
+        </section>
+
+        <!-- ===== 変換される内容 ===== -->
+        <section class="section">
+            <h2 class="section-title">変換される内容</h2>
+            <div class="table-wrap">
+                <table class="map-table">
+                    <tr><th>キャラクター保管所</th><th>キャラッシュ</th></tr>
+                    <tr><td>能力値（STR〜EDU）</td><td>能力値。作成時の値を「元の値」に、成長・特徴表などで増えた分を「その他」に入れます</td></tr>
+                    <tr><td>HP・MP・アイデア・幸運・知識・DB</td><td>キャラッシュの自動計算と同じ値なら自動計算のまま、違えばその値で固定します</td></tr>
+                    <tr><td>現在SAN</td><td>SAN補正（現在SAN − POW×5）</td></tr>
+                    <tr><td>職業P・興味P</td><td>職業ポイント計算式と、追加分（補正）</td></tr>
+                    <tr><td>技能</td><td>初期値・職業P・興味P・成長分・その他。分野（運転（自動車）など）も入ります。基本技能にない追加技能は「独自技能」になります</td></tr>
+                    <tr><td>特徴表（メモに書かれたもの）</td><td>採用ルール「クトゥルフ2015」「探索者の特徴」と、探索者の特徴の欄（オプション）</td></tr>
+                    <tr><td>成長チェック</td><td>別のメモ「成長チェック」（オプション）</td></tr>
+                    <tr><td>武器</td><td>武器。成功率は備考の先頭に入れます</td></tr>
+                    <tr><td>所持品</td><td>システム別の所持品。単価・価格は備考に入れます</td></tr>
+                    <tr><td>プロフィール</td><td>名前・かな・職業・年齢・性別・出身・身長・体重・髪の色・瞳の色・タグ</td></tr>
+                    <tr><td>肌の色・所持金・預金/借金</td><td>自由項目</td></tr>
+                    <tr><td>メモ</td><td>共通メモか、システム別メモ（選べます）</td></tr>
+                    <tr><td>キャラシのURL</td><td>自由項目「キャラクター保管所」</td></tr>
+                </table>
+            </div>
+            <p class="section-desc" style="margin-top:8px;">画像・チャットパレットは変換されません。採用ルールは、特徴表が見つかったときだけ「クトゥルフ2015」「探索者の特徴」を入れます（それ以外のときは変えません）。取り込んだあとにキャラッシュで設定してください。</p>
+        </section>
+
+        <!-- ===== ブックマークレット ===== -->
+        <section class="section" id="bookmarklet">
+            <h2 class="section-title">マイリストからURLをまとめて取得</h2>
+            <p class="section-desc">キャラクター保管所のマイリストにある全キャラのURLを、ボタン一つでコピーできます。（パソコンのブラウザ向け）</p>
+            <ol class="steps">
+                <li class="step">
+                    <p class="step-title">最初に一度だけ：ブックマークに登録</p>
+                    <p>ブックマークバーを表示します。（<span class="key">Ctrl</span> + <span class="key">Shift</span> + <span class="key">B</span>、Macは <span class="key">⌘</span> + <span class="key">Shift</span> + <span class="key">B</span>）</p>
+                    <p>下の「<b>キャラシURL抽出</b>」ボタン（点線で囲まれたボタン）を、<b>マウスでつかんでブックマークバーまでドラッグ</b>します。</p>
+                    <p><a id="bookmarklet-link" class="bookmarklet-btn" href="#">キャラシURL抽出</a></p>
+                    <details>
+                        <summary style="cursor:pointer; font-size:12px; color:var(--primary-color);">ドラッグで登録できないときは</summary>
+                        <ol>
+                            <li>下の「コードをコピー」を押します。</li>
+                            <li>ブックマークバーで右クリック →「ページを追加」（ブラウザによっては「ブックマークを追加」）を選びます。</li>
+                            <li>名前に「キャラシURL抽出」、URL欄にコピーしたコードを貼り付けて保存します。</li>
+                        </ol>
+                        <textarea id="bookmarklet-code" class="code-area" readonly></textarea>
+                        <button class="btn-sub" id="bookmarklet-copy">コードをコピー</button>
+                    </details>
+                    <p>※CoCキャラシ保管スプレッドシートで登録した「キャラシURL抽出」も、そのまま使えます。</p>
+                </li>
+                <li class="step">
+                    <p class="step-title">マイリストで実行する</p>
+                    <p>キャラクター保管所に<b>ログイン</b>して、<a href="https://charasheet.vampire-blood.net/mylist" target="_blank">マイリスト</a>を開きます。</p>
+                    <p>ブックマークバーの「<b>キャラシURL抽出</b>」を押すと、全ページを読み込んでURLの一覧が出てきます。</p>
+                </li>
+                <li class="step">
+                    <p class="step-title">このページに貼り付ける</p>
+                    <p>「<b>コピーする</b>」を押し、このページの<a href="#url-input">URL入力欄</a>に貼り付けて「<b>変換する</b>」を押します。</p>
+                </li>
+            </ol>
+            <div class="note-box">
+                非公開にしているキャラシと、6版以外のキャラシは変換できません（一覧に理由が表示されます）。<br>
+                <b>不要になったら：</b>ブックマークバーの「キャラシURL抽出」を右クリックして「<b>削除</b>」を選ぶと消せます。<br>
+                このブックマークは、マイリストを開いて押したときだけ動きます。他のページで勝手に動いたり、情報を外部に送ったりすることはありません。
+            </div>
+        </section>
+
+        <!-- ===== よくある質問 ===== -->
+        <section class="section faq">
+            <h2 class="section-title">よくある質問</h2>
+            <details>
+                <summary>「非公開に設定されているか、削除された可能性があります」と表示されます</summary>
+                <div class="answer">
+                    <p>キャラクター保管所で<b>非公開</b>にしているキャラシは読み込めません。非公開のキャラシは、ログインしている本人しか見られないためです。マイリストからURLをまとめて取得すると、非公開のキャラシも入るので、この表示が出ます。</p>
+                    <p>読み込みたいときは、キャラクター保管所でキャラシを公開に切り替えてから、「<b>読み込めなかったものをもう一度</b>」を押してください。URLが正しいか、キャラシが削除されていないかも確認してください。</p>
+                    <p>公開しているのにこの表示が出るときは、保管所が混み合っていることがあります。少し時間をおいて、もう一度お試しください。</p>
+                </div>
+            </details>
+            <details>
+                <summary>読み込めなかったキャラシだけ、あとから変換し直せますか？</summary>
+                <div class="answer">
+                    <p>はい。一覧の上の「<b>読み込めなかったものをもう一度</b>」を押すと、読み込めなかったものだけを読み込み直します（6版ではないキャラシと、重複していたものは除きます）。変換できたキャラや、直した名前・タグはそのまま残ります。</p>
+                    <p>ページを閉じる前に「<b>読み込めなかったURLをコピー</b>」を押してメモしておけば、あとで入力欄に貼り付けて変換し直すこともできます。</p>
+                </div>
+            </details>
+            <details>
+                <summary>保管所でキャラシを直したのに、変換結果が古いままです</summary>
+                <div class="answer">
+                    <p>キャラクター保管所への負荷を減らすため、このページを開いているあいだは、一度読み込んだキャラシを読み込み直しません。</p>
+                    <p>保管所でキャラシを直したときは、このページを再読み込み（<span class="key">F5</span>）してから変換してください。</p>
+                </div>
+            </details>
+            <details>
+                <summary>7版や他のシステムのキャラシは使えますか？</summary>
+                <div class="answer">
+                    <p>現在はクトゥルフ神話TRPG <b>6版</b>のキャラシのみ対応しています。</p>
+                </div>
+            </details>
+            <details>
+                <summary>キャラシのデータはどこかに送られますか？</summary>
+                <div class="answer">
+                    <p>送られません。このページは、あなたのブラウザの中でキャラクター保管所からキャラシを読み込み、その場で変換しています。変換したデータが制作者や他のサーバーに送られることはありません。</p>
+                </div>
+            </details>
+            <details>
+                <summary>取り込んだあと、数字がずれています</summary>
+                <div class="answer">
+                    <p>キャラクター保管所とキャラッシュでは、計算のしかたや採用ルール（2010／2015など）の扱いが違うことがあります。取り込んだあとに、キャラッシュで能力値・技能を確認してください。</p>
+                    <p>ずれ方に決まりがありそうなときは、お問い合わせから教えていただけると助かります。</p>
+                </div>
+            </details>
+        </section>
+
+        <div class="footer">
+            <div class="footer-center">
+                <p>当ツールは、「株式会社アークライト」及び「株式会社KADOKAWA」が権利を有する『クトゥルフ神話TRPG』シリーズの二次創作物です。</p>
+                <p>Call of Cthulhu is copyright ©1981, 2015, 2019 by Chaosium Inc. ;all rights reserved. Arranged by
+                    Arclight Inc.</p>
+                <p>Call of Cthulhu is a registered trademark of Chaosium Inc.</p>
+                <p>PUBLISHED BY KADOKAWA CORPORATION　「クトゥルフ神話TRPG」「新クトゥルフ神話TRPG」</p>
+            </div>
+            <div class="footer-right">
+                <p>
+                    最終更新日：
+                    <span id="last-updated" style="cursor:pointer; text-decoration:underline;" onclick="openModal('changelogModal')"
+                        title="更新履歴を見る">2026/11/06</span>
+                </p>
+                <p><span style="cursor:pointer; text-decoration:underline;" onclick="openModal('creditsModal')">Special
+                        Thanks</span> | © 2026 ぬこた</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="changelogModal" class="modal-overlay" onclick="closeModal('changelogModal')">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <button class="modal-close-btn" onclick="closeModal('changelogModal')">×</button>
+            <div class="modal-title">更新履歴</div>
+            <div class="modal-body">
+                <div style="margin-bottom: 12px;">
+                    <div style="font-weight: 700;">v1.0.0（2026/11/06）</div>
+                    <ul><li>公開しました。</li></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="disclaimerModal" class="modal-overlay" onclick="closeModal('disclaimerModal')">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <button class="modal-close-btn" onclick="closeModal('disclaimerModal')">×</button>
+            <div class="modal-title">免責事項・利用規約</div>
+            <div class="modal-body">
+                <ul>
+                    <li>本ツールは、制作者が個人の趣味の範囲で開発・公開している非公式ツールです。</li>
+                    <li>キャラクター保管所様、キャラッシュ様とは一切関係ありません。本ツールについて、各サイト様へのお問い合わせはご遠慮ください。</li>
+                    <li>各サイトの仕様変更により、予告なく本ツールが利用できなくなる、または正しく変換できなくなる場合があります。</li>
+                    <li>本ツールの利用によって生じた、いかなる損害・トラブル（データの消失、変換内容の誤り、予期せぬ動作等）についても、制作者は一切の責任を負いません。</li>
+                    <li>本ツールは無料で提供されていますが、動作保証、および不具合修正や機能追加の義務を負うものではありません。</li>
+                    <li>予告なくサービスを停止、または仕様を変更する場合があります。</li>
+                </ul>
+                <div class="modal-title">注意事項</div>
+                <ul>
+                    <li>キャラシの読み込みと変換は、すべてお使いのブラウザの中で行います。キャラシのデータが制作者や他のサーバーに送られることはありません。</li>
+                    <li>変換できるのは、ご自身のキャラシ、または持ち主から許可を得たキャラシに限ってご利用ください。</li>
+                    <li>キャラクター保管所への負荷を避けるため、短時間に何度も変換するのはお控えください。</li>
+                    <li>キャラシの書き方によっては、正しく変換されない項目があります。取り込んだあとに、キャラッシュで内容を確認・修正してください。</li>
+                    <li>このページでは、利用状況を把握するためにGoogleアナリティクスを使用しています。収集するのはページの閲覧やボタンの操作（変換した件数など）の情報で、個人を特定する情報は収集しません。また、キャラシの中身が送られることはありません。</li>
+                </ul>
+                <div class="modal-title">動作環境</div>
+                <ul>
+                    <li>推奨環境： PC (Win・Mac) / Google Chrome</li>
+                    <li>スマホのブラウザでも変換・ダウンロードできます。</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div id="creditsModal" class="modal-overlay" onclick="closeModal('creditsModal')">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <button class="modal-close-btn" onclick="closeModal('creditsModal')">×</button>
+            <div class="modal-title">Special Thanks</div>
+            <div class="modal-body">
+                <p>本ツールの作成にあたり、以下のサイト・ツール様を参考に、または利用させていただきました。多大なる感謝を申し上げます。</p>
+                <h4
+                    style="margin: 15px 0 5px; color: var(--primary-color); border-bottom: 1px dashed var(--border-color);">
+                    ツール連携・対応</h4>
+                <ul style="list-style: none; padding: 0;">
+                    <li>・<a href="https://charasheet.vampire-blood.net/" target="_blank" style="color: var(--text-color);">キャラクター保管所 様</a></li>
+                    <li>・<a href="https://charash.jp/" target="_blank" style="color: var(--text-color);">キャラッシュ 様</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div id="authorModal" class="modal-overlay" onclick="closeModal('authorModal')">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <button class="modal-close-btn" onclick="closeModal('authorModal')">×</button>
+            <div class="modal-title">作った人</div>
+            <div class="modal-body">
+                <div class="author-container">
+                    <img src="https://drive.google.com/thumbnail?sz=w1000&id=1aXVDSHGr6bvIoyjgPY8lr8PjhZJLaotJ"
+                        class="author-icon" alt="ぬこた">
+                    <div class="author-info">
+                        <div class="author-name-row">
+                            <span class="author-name">ぬこた</span>
+                            <a href="https://x.com/nukonuko_4" target="_blank" class="author-x-btn" title="X (Twitter)">
+                                <svg viewBox="0 0 24 24">
+                                    <path
+                                        d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                                </svg>
+                            </a>
+                        </div>
+                        <div class="author-bio">
+                            気ままにCoCテキセメインでTRPG遊んでいます。<br>
+                            不具合報告や要望は上部のお問い合わせボタンまでお気軽にどうぞ。
+                        </div>
+                    </div>
+                </div>
+                <div class="author-support">
+                    <p>
+                        当ツールを気に入って支援したい富豪・石油王様向けに、<br>
+                        <a href="https://booth.pm/wish_list_names/K1NTM3Bx" target="_blank" class="support-link">BOOTHのスキリスト</a>、
+                        <a href="https://www.amazon.jp/hz/wishlist/ls/2SYYSJUGAZKIR?ref_=wl_share" target="_blank"
+                            class="support-link">Amazonのほしいも</a>
+                        を公開しています。<br>その他URLでのギフトも大歓迎です。
+                        <span class="support-note">（※ギフトURLはお問い合わせボタンからお送りください。）</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="converter.js"></script>
+    <script src="zip.js"></script>
+    <script src="bookmarklet-code.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
