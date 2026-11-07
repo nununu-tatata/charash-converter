@@ -13,10 +13,17 @@ const RETRY_WAITS_MS = [3000, 6000];
 const CHARASH_IMPORT_LIMIT = 50;
 // これより多いときは、保管所の負荷を下げるため、はじめから SLOW_FETCH_INTERVAL_MS の間隔で読み込む
 const LARGE_BATCH = 300;
+// Charaenoの読み込みの間隔（ミリ秒）。1人につき「キャラシ」と「記録一覧」の2回（公開の記録があれば、その件数も）読み込む
+const CHARAENO_INTERVAL_MS = 1000;
 
 // 件数から、読み込みにかかる時間の目安（分）を出す
 function intervalFor(count) { return count > LARGE_BATCH ? SLOW_FETCH_INTERVAL_MS : FETCH_INTERVAL_MS; }
-function estimateMinutes(count) { return Math.max(1, Math.ceil(count * intervalFor(count) / 60000)); }
+function estimateMinutes(keys) {
+    const ce = keys.filter(isCharaenoKey).length;
+    const hokan = keys.length - ce;
+    return Math.max(1, Math.ceil((hokan * intervalFor(hokan) + ce * 2 * CHARAENO_INTERVAL_MS) / 60000));
+}
+const siteOf = key => (isCharaenoKey(key) ? 'Charaeno' : 'キャラクター保管所');
 
 const urlInput = document.getElementById('url-input');
 const urlCount = document.getElementById('url-count');
@@ -55,29 +62,33 @@ function getOptions() {
 }
 
 // --- 入力欄からURLを読み取る（空白・改行・カンマ区切り。同じキャラの重複は1つにする） ---
+// 7版のCharaenoのURLは seventh に分ける（6版のみ対応のため）
 function readUrls(text) {
     const keys = [];
     const invalid = [];
+    const seventh = [];
     text.split(/[\s,、]+/).filter(Boolean).forEach(token => {
         try {
             const key = parseSheetKey(token);
             if (!keys.includes(key)) keys.push(key);
         } catch (e) {
-            invalid.push(token);
+            (e.kind === 'seventh' ? seventh : invalid).push(token);
         }
     });
-    return { keys, invalid };
+    return { keys, invalid, seventh };
 }
 
 urlInput.addEventListener('input', () => {
-    const { keys, invalid } = readUrls(urlInput.value);
-    urlCount.textContent = !keys.length ? ''
-        : `${keys.length}件・目安 約${estimateMinutes(keys.length)}分`
-        + (keys.length > LARGE_BATCH ? `（${LARGE_BATCH}件を超えるので、ゆっくり読み込みます）` : '')
+    const { keys, invalid, seventh } = readUrls(urlInput.value);
+    const hokan = keys.filter(k => !isCharaenoKey(k)).length;
+    urlCount.textContent = !keys.length && !seventh.length ? ''
+        : `${keys.length}件・目安 約${estimateMinutes(keys)}分`
+        + (hokan > LARGE_BATCH ? `（保管所のキャラシが${LARGE_BATCH}件を超えるので、ゆっくり読み込みます）` : '')
+        + (seventh.length ? `・7版のキャラシ ${seventh.length}件（対応していません）` : '')
         + (invalid.length ? `・URLではない行 ${invalid.length}件` : '');
 });
 
-// --- キャラクター保管所からJSONを取得する ---
+// --- キャラシのデータを取得する ---
 // kind：読み込めなかった理由。'notfound'（非公開・削除・混雑）・'network'（接続できない）・'http'・'parse'・'notcoc'・'dup'・'stopped'
 // 'notcoc'（6版ではない）と 'dup'（重複）以外は、「読み込めなかったものをもう一度」の対象にする
 class LoadError extends Error {
@@ -85,32 +96,37 @@ class LoadError extends Error {
 }
 const NOT_FOUND_MESSAGE = 'キャラシを読み込めませんでした。非公開・削除されているか、キャラクター保管所が混み合っていた可能性があります（非公開のキャラシは読み込めません）。'
     + '公開しているキャラシなら、少し時間をおいて「読み込めなかったものをもう一度」を押してください。';
+const CHARAENO_NOT_FOUND_MESSAGE = 'Charaenoでキャラシが見つかりませんでした。削除されたか、URLが間違っている可能性があります。';
+const RETRY_LATER = 'しばらくしてから「読み込めなかったものをもう一度」を押してください。';
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-// 前の読み込みを始めてから fetchInterval たつまで待ってから読み込む
+// 前の読み込みを始めてから決まった時間がたつまで待ってから読み込む（サイトごとに数える）
 // （返事が速い環境でも、保管所の「1秒に1件まで」を超えないように、始めた時刻で間をあける）
-let lastFetchAt = 0;
+const lastFetchAt = { hokan: 0, charaeno: 0 };
 let fetchInterval = FETCH_INTERVAL_MS;
-async function pacedFetch(url, options) {
-    const wait = lastFetchAt + fetchInterval - Date.now();
+async function pacedFetch(url, options, site) {
+    const s = site || 'hokan';
+    const wait = lastFetchAt[s] + (s === 'charaeno' ? CHARAENO_INTERVAL_MS : fetchInterval) - Date.now();
     if (wait > 0) await sleep(wait);
-    lastFetchAt = Date.now();
+    lastFetchAt[s] = Date.now();
     return fetch(url, options);
 }
 
 // 1回だけ読み込む
 // 保管所は、キャラシが見つからないとき（非公開・削除）や混み合っているとき（503）の返事に
 // 「他のサイトから読んでよい」という許可を付けていない。そのためブラウザからは、どれも同じエラー（'blocked'）に見える
-async function fetchOnce(url) {
+// （Charaenoはどの返事にも許可が付いているので、'blocked' は接続できないときだけ）
+async function fetchOnce(url, site) {
+    const siteName = site === 'charaeno' ? 'Charaeno' : 'キャラクター保管所';
     let res;
     try {
-        res = await pacedFetch(url, { cache: 'no-cache' });
+        res = await pacedFetch(url, { cache: 'no-cache' }, site);
     } catch (e) {
         throw new LoadError('', 'blocked');
     }
-    if (res.status === 404) throw new LoadError(NOT_FOUND_MESSAGE, 'notfound');
-    if (!res.ok) throw new LoadError(`キャラクター保管所からの取得に失敗しました（エラー: ${res.status}）。しばらくしてから「読み込めなかったものをもう一度」を押してください。`, 'http');
+    if (res.status === 404) throw new LoadError(site === 'charaeno' ? CHARAENO_NOT_FOUND_MESSAGE : NOT_FOUND_MESSAGE, 'notfound');
+    if (!res.ok) throw new LoadError(`${siteName}からの取得に失敗しました（エラー: ${res.status}）。${RETRY_LATER}`, 'http');
     try {
         return await res.json();
     } catch (e) {
@@ -120,24 +136,24 @@ async function fetchOnce(url) {
 
 // 読み込めなかったときは、少し待って自動でやり直す（混み合っているだけなら、たいてい2回目以降で読める）
 // onRetry(待つミリ秒) … やり直す前に呼ぶ（画面に「待っています」と出すため）
-async function fetchCharacterJson(key, onRetry) {
-    const url = `https://charasheet.vampire-blood.net/${key}.json`;
+async function fetchWithRetry(url, site, onRetry) {
     for (let attempt = 0; ; attempt++) {
         try {
-            return await fetchOnce(url);
+            return await fetchOnce(url, site);
         } catch (e) {
             const canRetry = (e.kind === 'blocked' || e.kind === 'http') && attempt < RETRY_WAITS_MS.length && !stopRequested;
             if (canRetry) {
                 // 混み合っているので、この回の残りは間を広げて読み込む
-                fetchInterval = SLOW_FETCH_INTERVAL_MS;
+                if (site !== 'charaeno') fetchInterval = SLOW_FETCH_INTERVAL_MS;
                 if (onRetry) onRetry(RETRY_WAITS_MS[attempt]);
                 await sleep(RETRY_WAITS_MS[attempt]);
                 continue;
             }
             if (e.kind !== 'blocked') throw e;
+            if (site === 'charaeno') throw new LoadError(`Charaenoに接続できませんでした。インターネットの接続を確認して、${RETRY_LATER}`, 'network');
             // 中身を読まない形でもう一度送り、保管所から返事があるかどうかで「接続できない」と見分ける
             if (await isReachable(url)) throw new LoadError(NOT_FOUND_MESSAGE, 'notfound');
-            throw new LoadError('キャラクター保管所に接続できませんでした。インターネットの接続を確認して、しばらくしてから「読み込めなかったものをもう一度」を押してください。', 'network');
+            throw new LoadError(`キャラクター保管所に接続できませんでした。インターネットの接続を確認して、${RETRY_LATER}`, 'network');
         }
     }
 }
@@ -150,6 +166,48 @@ async function isReachable(url) {
     } catch (e) {
         return false;
     }
+}
+
+// キャラシを読み込んで、変換できる形（保管所の形）にする
+async function loadCharacter(key, onRetry) {
+    if (!isCharaenoKey(key)) return fetchWithRetry(`https://charasheet.vampire-blood.net/${key}.json`, 'hokan', onRetry);
+    return loadCharaeno(key.slice(CHARAENO_PREFIX.length), onRetry);
+}
+
+// Charaeno：キャラシ（技能の内訳つき）と「この探索者の記録一覧」を読み込む
+// 記録は公開のものだけ読める（パスワード認証・非公開の記録は、持ち主やパスワードを知っている人しか読めない）
+async function loadCharaeno(id, onRetry) {
+    const api = `https://charaeno.com/api/v1/6th/${id}`;
+    const info = { id, records: [], hiddenRecords: 0, failedRecords: 0 };
+    const isSheet = d => d && typeof d === 'object' && d.characteristics && Array.isArray(d.skills);
+    let detail;
+    try {
+        detail = await fetchWithRetry(api, 'charaeno', onRetry);
+        if (!isSheet(detail)) throw new LoadError('', 'parse');
+    } catch (e) {
+        if (e.kind === 'notfound' || e.kind === 'network' || stopRequested) throw e;
+        // 内訳つきのデータが読めないときは、開発者向けに公開されている要約（技能は合計値だけ）を使う
+        const summary = await fetchWithRetry(`${api}/summary`, 'charaeno', onRetry);
+        if (!isSheet(summary)) throw new LoadError('キャラシのデータを読み取れませんでした。URLが正しいか確認してください。', 'parse');
+        detail = summaryToDetail(summary);
+        info.fromSummary = true;
+    }
+    try {
+        const list = toArray(await fetchWithRetry(`${api}/notes`, 'charaeno', onRetry));
+        for (const note of list) {
+            if (!note || note.visibility !== 'public') { info.hiddenRecords++; continue; }
+            try {
+                const full = await fetchWithRetry(`${api}/notes/${encodeURIComponent(note.id)}`, 'charaeno', onRetry);
+                info.records.push({ title: full.title != null ? full.title : note.title, text: full.text });
+            } catch (e) {
+                info.failedRecords++;
+            }
+        }
+    } catch (e) {
+        // 「見つからない」は記録がないだけなので、案内は出さない
+        if (e.kind !== 'notfound') info.recordsFailed = true;
+    }
+    return charaenoToSheet(detail, info);
 }
 
 // --- 名前・かなの初期値（自動で分ける）。手で直したキャラはそのまま ---
@@ -215,7 +273,8 @@ function updateRow(item) {
     const row = item.row;
     row.innerHTML = '';
     row.className = 'char-row' + (item.status === 'error' ? ' error' : '') + (item === previewItem ? ' selected' : '');
-    const sheetUrl = `https://charasheet.vampire-blood.net/${item.id || item.key}`;
+    const sheetUrl = isCharaenoKey(item.key) ? sheetUrlOf(item.key) : sheetUrlOf(item.id || item.key);
+    const site = isCharaenoKey(item.key) ? 'Charaeno' : '保管所';
 
     if (item.status === 'loading' || item.status === 'waiting') {
         row.appendChild(el('div', 'char-status', item.status === 'loading' ? '⏳' : '・'));
@@ -270,7 +329,7 @@ function updateRow(item) {
         const how = item.edited ? '手で直しました'
             : { auto: '名前からかなを分けました', title: 'かなはタイトルから見つけました', memo: 'かなはメモから見つけました' }[item.how]
             || 'かなは見つかりませんでした';
-        return `保管所の名前：${original || '（空）'}　・　${how}`;
+        return `${site}の名前：${original || '（空）'}　・　${how}`;
     };
     const noteEl = el('div', 'char-sub', noteText());
     main.appendChild(noteEl);
@@ -314,7 +373,7 @@ function updateRow(item) {
     const actions = el('div', 'char-actions');
     const viewBtn = el('button', 'btn-sub', '中身を見る');
     viewBtn.addEventListener('click', () => showPreview(item));
-    const link = el('a', 'btn-sub', '保管所 ↗');
+    const link = el('a', 'btn-sub', `${site} ↗`);
     link.href = sheetUrl; link.target = '_blank';
     actions.appendChild(viewBtn);
     actions.appendChild(link);
@@ -389,7 +448,7 @@ function updateSummary() {
     const ng = items.filter(i => i.status === 'error');
     const included = ok.filter(i => i.include);
     const reasons = [
-        ['notfound', '非公開・削除・混雑の可能性'], ['network', '接続できない'], ['http', '保管所のエラー'],
+        ['notfound', '非公開・削除・混雑の可能性'], ['network', '接続できない'], ['http', 'サイトのエラー'],
         ['notcoc', '6版ではない'], ['dup', '重複'], ['stopped', '中止'], ['parse', '読み取れない'],
     ].map(([kind, label]) => [label, ng.filter(i => i.errorKind === kind).length]).filter(([, n]) => n > 0);
     document.getElementById('result-summary').textContent =
@@ -418,12 +477,16 @@ const loadedCache = new Map();
 const isRetryable = item => item.status === 'error' && item.errorKind !== 'notcoc' && item.errorKind !== 'dup';
 
 convertBtn.addEventListener('click', () => {
-    const { keys, invalid } = readUrls(urlInput.value);
+    const { keys, invalid, seventh } = readUrls(urlInput.value);
+    const seventhNote = seventh.length ? `新クトゥルフ神話TRPG（7版）のキャラシ（${seventh.length}件）は、対応していないので飛ばしました。` : '';
     if (!keys.length) {
-        showMessage(invalid.length ? 'キャラクター保管所のキャラシURLが見つかりません。\n例：https://charasheet.vampire-blood.net/XXXXXXX' : 'キャラシのURLを入れてください。', 'error');
+        showMessage(seventhNote || (invalid.length
+            ? 'キャラシのURLが見つかりません。\n例：https://charasheet.vampire-blood.net/XXXXXXX\n　　https://charaeno.com/6th/XXXXXXXXXXXXXXXXXXXXX'
+            : 'キャラシのURLを入れてください。'), 'error');
         return;
     }
-    showMessage(invalid.length ? `URLとして読み取れなかったもの（${invalid.length}件）は飛ばしました：\n${invalid.slice(0, 5).join('\n')}${invalid.length > 5 ? '\n…' : ''}` : '', 'warn');
+    const invalidNote = invalid.length ? `URLとして読み取れなかったもの（${invalid.length}件）は飛ばしました：\n${invalid.slice(0, 5).join('\n')}${invalid.length > 5 ? '\n…' : ''}` : '';
+    showMessage([seventhNote, invalidNote].filter(Boolean).join('\n'), 'warn');
 
     items = keys.map(key => ({ key, status: 'waiting', include: true, edited: false }));
     seenIds = new Map();
@@ -451,7 +514,7 @@ document.getElementById('retry-btn').addEventListener('click', () => {
 
 // 読み込めなかったURLをコピーする（あとで試すときのために）
 document.getElementById('copy-failed-btn').addEventListener('click', e => {
-    const urls = items.filter(i => i.status === 'error').map(i => `https://charasheet.vampire-blood.net/${i.key}`);
+    const urls = items.filter(i => i.status === 'error').map(i => sheetUrlOf(i.key));
     if (!urls.length) return;
     const btn = e.currentTarget;
     navigator.clipboard.writeText(urls.join('\n')).then(() => {
@@ -482,9 +545,9 @@ async function runQueue(targets) {
         item.status = 'loading';
         updateRow(item);
         try {
-            // このページで一度読み込んだキャラシは、保管所から読み込み直さない（保管所の負荷を減らすため）
-            item.data = loadedCache.get(item.key) || await fetchCharacterJson(item.key, ms => {
-                progressBox.textContent = `保管所が混み合っているため、${ms / 1000}秒待ってやり直しています… ${i + 1} / ${targets.length}件`;
+            // このページで一度読み込んだキャラシは、読み込み直さない（保管所・Charaenoの負荷を減らすため）
+            item.data = loadedCache.get(item.key) || await loadCharacter(item.key, ms => {
+                progressBox.textContent = `${siteOf(item.key)}が混み合っているため、${ms / 1000}秒待ってやり直しています… ${i + 1} / ${targets.length}件`;
             });
             loadedCache.set(item.key, item.data);
             item.id = item.data.data_id ? item.data.data_id.toString() : item.key;
@@ -601,7 +664,7 @@ bookmarkletLink.href = BOOKMARKLET_HREF;
 bookmarkletCode.value = BOOKMARKLET_HREF;
 bookmarkletLink.addEventListener('click', e => {
     e.preventDefault();
-    alert('このボタンはクリックせず、ブックマークバーへドラッグして登録してください。\n\n登録したら、キャラクター保管所のマイリストを開いてからブックマークを押してください。');
+    alert('このボタンはクリックせず、ブックマークバーへドラッグして登録してください。\n\n登録したら、キャラクター保管所のマイリストか、Charaenoのリスト（探索者一覧）を開いてからブックマークを押してください。');
 });
 document.getElementById('bookmarklet-copy').addEventListener('click', e => {
     navigator.clipboard.writeText(BOOKMARKLET_HREF).then(() => {

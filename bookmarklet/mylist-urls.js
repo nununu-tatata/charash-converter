@@ -1,17 +1,21 @@
 // ==========================================
-// キャラクター保管所のマイリストから、キャラクターシートのURLを一括で抜き出すブックマークレット
-// マイリスト（https://charasheet.vampire-blood.net/mylist）を開いた状態で実行する
-// 全ページ（1ページ50件）を順に読み込み、数字IDの形のURLを一覧にして表示する
-// CoCキャラシ保管スプレッドシートのものと同じ。完了画面の案内文だけ、このツール向けに変えている
+// キャラクター保管所のマイリスト・Charaenoのリストから、キャラクターシートのURLを一括で抜き出すブックマークレット
+// 保管所：マイリスト（https://charasheet.vampire-blood.net/mylist）を開いた状態で実行する。
+//         全ページ（1ページ50件）を順に読み込み、数字IDの形のURLを一覧にして表示する
+//         （CoCキャラシ保管スプレッドシートのものと同じ。完了画面の案内文だけ、このツール向けに変えている）
+// Charaeno：リスト（https://charaeno.com/list）を開いた状態で実行する。全員が1ページに並ぶので、
+//         開いているページから6版のキャラシのURLだけを集める（7版は対応していないので数だけ出す）
 // build.js でこのファイルから bookmarklet-code.js（登録用リンク）を生成する
 // ==========================================
 (async () => {
   const HOST = 'charasheet.vampire-blood.net';
+  const CHARAENO = 'charaeno.com';
   const MAX_PAGES = 100;
   const OVERLAY_ID = 'cs-url-extractor';
 
-  if (location.hostname !== HOST || !location.pathname.startsWith('/mylist')) {
-    alert('キャラクター保管所のマイリストを開いてから、もう一度クリックしてください。\n\nhttps://charasheet.vampire-blood.net/mylist');
+  const onCharaeno = location.hostname === CHARAENO && location.pathname.startsWith('/list');
+  if (!onCharaeno && (location.hostname !== HOST || !location.pathname.startsWith('/mylist'))) {
+    alert('キャラクター保管所のマイリストか、Charaenoのリスト（探索者一覧）を開いてから、もう一度クリックしてください。\n\nhttps://charasheet.vampire-blood.net/mylist\nhttps://charaeno.com/list');
     return;
   }
   document.getElementById(OVERLAY_ID)?.remove();
@@ -30,14 +34,55 @@
         <button data-role="close" style="padding:10px 16px;font-size:15px;background:#eee;border:0;border-radius:6px;cursor:pointer;">閉じる</button>
       </div>
       <div style="font-size:12px;color:#555;margin-top:10px;line-height:1.6;">
-        コピーしたら、保管所→キャラッシュ変換ツールのURL入力欄に貼り付けてください。
+        コピーしたら、保管所・Charaeno→キャラッシュ変換ツールのURL入力欄に貼り付けてください。
       </div>
     </div>`;
   document.body.appendChild(overlay);
   const $ = role => overlay.querySelector(`[data-role="${role}"]`);
   $('close').onclick = () => overlay.remove();
 
-  // ---- 1ページ分のHTMLからキャラシURLを集める ----
+  // ---- 見つかったURLを表示して、コピーできるようにする ----
+  const showResult = (urls, extra) => {
+    $('output').value = urls.join('\n');
+    $('status').innerHTML = `<b>${urls.length}件</b> のキャラクターシートが見つかりました。${extra || ''}`;
+    const copyBtn = $('copy');
+    copyBtn.disabled = false;
+    copyBtn.onclick = async () => {
+      try {
+        await navigator.clipboard.writeText($('output').value);
+      } catch (e) {
+        // クリップボードAPIが使えない環境向け
+        $('output').select();
+        document.execCommand('copy');
+      }
+      copyBtn.textContent = '✅ コピーしました！';
+    };
+  };
+
+  // ---- Charaeno：開いているページのリンクから集める ----
+  if (onCharaeno) {
+    const sixth = new Set();
+    const seventh = new Set();
+    document.querySelectorAll('a[href]').forEach(a => {
+      let u;
+      try { u = new URL(a.getAttribute('href'), location.href); } catch (e) { return; }
+      if (u.hostname !== CHARAENO) return;
+      const m = u.pathname.match(/^\/(6th|7th)\/([A-Za-z0-9_-]{21})\/?$/);
+      if (!m) return;
+      (m[1] === '6th' ? sixth : seventh).add(m[2]);
+    });
+    if (sixth.size === 0) {
+      $('status').textContent = seventh.size
+        ? `7版のキャラシ（${seventh.size}件）しか見つかりませんでした。このツールは6版のキャラシのみ対応しています。`
+        : '6版のキャラシが見つかりませんでした。ログインしているか、リストが表示されているか確認してください。';
+      return;
+    }
+    showResult([...sixth].map(id => `https://${CHARAENO}/6th/${id}`),
+      seventh.size ? `<br>（7版のキャラシ ${seventh.size}件は、対応していないので入れていません）` : '');
+    return;
+  }
+
+  // ---- 保管所：1ページ分のHTMLからキャラシURLを集める ----
   // 一覧には1キャラにつき「数字IDのリンク」と「MDIDのリンク」があるので、数字IDを優先する
   const collectIds = (doc, baseUrl) => {
     const numeric = [];
@@ -81,20 +126,5 @@
     return;
   }
 
-  const urls = [...found].map(id => `https://${HOST}/${id}`);
-  $('output').value = urls.join('\n');
-  $('status').innerHTML = `<b>${urls.length}件</b> のキャラクターシートが見つかりました。`;
-
-  const copyBtn = $('copy');
-  copyBtn.disabled = false;
-  copyBtn.onclick = async () => {
-    try {
-      await navigator.clipboard.writeText($('output').value);
-    } catch (e) {
-      // クリップボードAPIが使えない環境向け
-      $('output').select();
-      document.execCommand('copy');
-    }
-    copyBtn.textContent = '✅ コピーしました！';
-  };
+  showResult([...found].map(id => `https://${HOST}/${id}`));
 })();

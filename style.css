@@ -390,6 +390,10 @@ header { flex-wrap: wrap; gap: 12px; }
 .map-table th, .map-table td { border: 1px solid var(--border-color); padding: 6px 10px; text-align: left; vertical-align: top; }
 .map-table th { background: var(--element-bg); white-space: nowrap; }
 .table-wrap { overflow-x: auto; }
+.sub-title {
+    font-family: 'Zen Maru Gothic', sans-serif; font-size: 16px; color: var(--primary-color);
+    margin: 20px 0 8px;
+}
 
 @media (max-width: 600px) {
     h1 { font-size: 22px; }

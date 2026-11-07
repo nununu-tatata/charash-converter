@@ -1,16 +1,32 @@
 // ==========================================
-// キャラクター保管所（CoC6版）のJSON → キャラッシュテキスト v2 への変換
+// キャラクター保管所・Charaeno（CoC6版）のデータ → キャラッシュテキスト v2 への変換
 // 画面の処理（main.js）とは分けて、ここには変換のルールだけを書く
 // 形式の出典：https://charash.jp/api/export/txt/guide
 // ==========================================
 
 // --- URL・IDの読み取り ---
-// 数字ID（…/XXXXXXX）と MDID（…/m + 32桁の英数字）の両方に対応。IDだけの入力も受け付ける
+// キャラクター保管所：数字ID（…/XXXXXXX）と MDID（…/m + 32桁の英数字）の両方に対応。IDだけの入力も受け付ける
+// Charaeno：https://charaeno.com/6th/（21文字のID）。「charaeno:ID」の形で返す（7版のURLは対応していない）
+const CHARAENO_PREFIX = 'charaeno:';
 function parseSheetKey(input) {
     const str = (input || '').toString().trim();
+    const ce = str.match(/charaeno\.com\/(6th|7th)\/([A-Za-z0-9_-]{21})(?![A-Za-z0-9_-])/);
+    if (ce) {
+        if (ce[1] === '7th') {
+            const e = new Error('新クトゥルフ神話TRPG（7版）のキャラシです。このツールは6版のキャラシのみ対応しています。');
+            e.kind = 'seventh';
+            throw e;
+        }
+        return CHARAENO_PREFIX + ce[2];
+    }
     const m = str.match(/vampire-blood\.net\/(m[0-9a-f]{32}|\d+)/i) || str.match(/^(m[0-9a-f]{32}|\d+)$/i);
-    if (!m) throw new Error('キャラクター保管所のキャラシURLではありません。\n例：https://charasheet.vampire-blood.net/XXXXXXX');
+    if (!m) throw new Error('キャラシのURLではありません。\n例：https://charasheet.vampire-blood.net/XXXXXXX');
     return m[1].toLowerCase();
+}
+const isCharaenoKey = key => key.startsWith(CHARAENO_PREFIX);
+// キャラシを開くURL
+function sheetUrlOf(key) {
+    return isCharaenoKey(key) ? `https://charaeno.com/6th/${key.slice(CHARAENO_PREFIX.length)}` : `https://charasheet.vampire-blood.net/${key}`;
 }
 
 // --- 項目が1件だけのとき、配列ではなく文字列やオブジェクトで来ることがあるので、必ず配列にする ---
@@ -418,7 +434,12 @@ function convertToCharash(data, options) {
         throw new Error(`クトゥルフ神話TRPG 6版のキャラシではありません（システム：${data.game}）。\nこのツールは6版のキャラシのみ対応しています。`);
     }
 
-    const warnings = [];
+    // Charaenoのキャラシは、charaenoToSheet() で保管所と同じ形に読みかえてから渡す。
+    // 保管所の形に入らないもの（記録一覧・経験の記録など）は data._src に入っている
+    const src = data._src || null;
+    const siteName = src ? src.site : 'キャラクター保管所';
+
+    const warnings = src ? [...src.warnings] : [];
     const lines = [];
     const push = (...ls) => lines.push(...ls);
 
@@ -467,13 +488,16 @@ function convertToCharash(data, options) {
     if (str(data.money)) free.push(['所持金', str(data.money)]);
     if (str(data.debt)) free.push(['預金・借金', str(data.debt)]);
     if (str(data.data_title) && str(data.data_title) !== fullName) free.push(['保管所のタイトル', str(data.data_title)]);
-    if (id) free.push(['キャラクター保管所', `https://charasheet.vampire-blood.net/${id}`]);
+    if (src) free.push(...src.free.filter(([, v]) => str(v) !== ''));
+    else if (id) free.push(['キャラクター保管所', `https://charasheet.vampire-blood.net/${id}`]);
     if (free.length) push('【自由項目】', '', ...free.map(([k, v]) => fieldLine(k, v)), '');
 
     // メモ
     const memoBlocks = [];
     const memo = str(data.pc_making_memo);
-    if (memo) memoBlocks.push(longText('キャラクター保管所のメモ', data.pc_making_memo.toString().trim()));
+    if (memo) memoBlocks.push(longText(`${siteName}のメモ`, data.pc_making_memo.toString().trim()));
+    // Charaenoの「この探索者の記録一覧」は、1件ずつ別のメモにする
+    if (src) src.memos.forEach(m => memoBlocks.push(longText(m.title, m.body)));
 
     // ======== 技能の読み取り（成長チェックのメモに使うので先に読む） ========
     const skillTables = [];
@@ -555,7 +579,8 @@ function convertToCharash(data, options) {
 
     if (opt.growthMemo && growthChecked.length) {
         memoBlocks.push(longText('成長チェック',
-            'キャラクター保管所で成長チェックが付いていた技能です。\n不必要な場合は、このメモは消してください。\n\n' + growthChecked.join('、')));
+            `${siteName}で成長チェックが付いていた技能です。`
+            + '\n不必要な場合は、このメモは消してください。\n\n' + growthChecked.join('、')));
     }
 
     if (opt.memoTarget !== 'system' && memoBlocks.length) {
@@ -566,8 +591,10 @@ function convertToCharash(data, options) {
     // ======== クトゥルフ6版 ========
     push('【クトゥルフ6版】', '', '【能力値】', '');
     // 元の値 = 作成時の値、その他 = 今の値との差（成長・特徴表など）。増減（年齢修正）は保管所にないので0
+    // （Charaenoには年齢修正の欄があるので、増減に入れる）
+    const ageAdjust = i => (src && src.ageAdjust ? src.ageAdjust[i] : 0);
     push(...tableLines(['能力', '元の値', '増減', 'その他'],
-        ABILITY_NAMES.map((n, i) => [n, base[i + 1], 0, now[i + 1] - base[i + 1]])));
+        ABILITY_NAMES.map((n, i) => [n, base[i + 1], ageAdjust(i), now[i + 1] - base[i + 1] - ageAdjust(i)])));
     push('');
 
     // HP・MP・ダメージボーナス・アイデア・幸運・知識：キャラッシュの自動計算と同じなら @自動、違えば固定値
@@ -596,7 +623,9 @@ function convertToCharash(data, options) {
     if (str(data.TS_Maximum) !== '') {
         const occTotal = int(data.TS_Maximum);
         const occBase = occTotal - int(data.TS_Add);
-        const found = OCCUPATION_FORMULAS.find(([, f]) => f(ab) === occBase) || OCCUPATION_FORMULAS[0];
+        // Charaenoは計算式の種類が分かるので、それを使う（値だけで探すと、同じ値になる別の式と間違えることがある）
+        const found = (src && OCCUPATION_FORMULAS.find(([n]) => n === src.occFormula))
+            || OCCUPATION_FORMULAS.find(([, f]) => f(ab) === occBase) || OCCUPATION_FORMULAS[0];
         push(fieldLine('職業ポイント計算式', found[0]));
         push(fieldLine('職業ポイント補正', occTotal - found[1](ab)));
     }
@@ -621,8 +650,9 @@ function convertToCharash(data, options) {
         const hitNote = !hit ? '' : /^[0-9０-９]+[%％]?$/.test(hit) ? `成功率: ${hit.replace(/[%％]$/, '')}%` : `使用技能: ${hit}`;
         // その他の欄の「故障ナンバー100」「故障98」は、キャラッシュの故障NOの列に入れる
         let sonota = at('arms_sonota');
-        let malfunction = '';
-        const fm = sonota.match(/故障(?:ナンバー|No\.?|NO|ＮＯ|番号|率)?[\s:：]*([0-9０-９]+)/i);
+        // Charaenoには故障ナンバーの欄がある
+        let malfunction = at('arms_malfunction');
+        const fm = malfunction ? null : sonota.match(/故障(?:ナンバー|No\.?|NO|ＮＯ|番号|率)?[\s:：]*([0-9０-９]+)/i);
         if (fm) {
             malfunction = String(int(fm[1]));
             sonota = sonota.replace(fm[0], '').replace(/^[\s　、,/／]+|[\s　、,/／]+$/g, '');
@@ -649,6 +679,14 @@ function convertToCharash(data, options) {
     if (items.length) {
         push('【システム別の所持品】', '');
         push(...tableLines(['名前', '個数', '備考'], items));
+        push('');
+    }
+
+    // 経験の記録（Charaenoの「読んだ魔導書」「負傷」などの欄）
+    const experience = src ? src.experience.filter(([, v]) => str(v) !== '') : [];
+    if (experience.length) {
+        push('【システム別の経験の記録】', '');
+        push(...experience.map(([k, v]) => fieldLine(k, v.toString().trim())));
         push('');
     }
 
@@ -694,6 +732,243 @@ function mapExtraSkill(hokanName, ab) {
     return { label: hokanName, custom: true };
 }
 
+// ==========================================
+// Charaeno（CoC6版）のデータ → 保管所と同じ形への読みかえ
+// 読みかえたあとは、保管所と同じ convertToCharash() で変換する（ふりがな・特徴表・同じ技能の整理なども同じに動く）
+// 使うデータ：
+//   https://charaeno.com/api/v1/6th/{ID}         … 技能の内訳（職業P・興味P・成長・その他）まで入っている。
+//                                                  Charaeno自身の「Charaenoからインポート」もこれを使っている
+//   https://charaeno.com/api/v1/6th/{ID}/summary … 開発者向けに公開されている要約。技能は合計値だけなので、
+//                                                  上のデータが読めなかったときだけ使う（summaryToDetail で同じ形にする）
+// info：{ id, records: [{ title, text }]（公開の記録）, hiddenRecords（読めなかった記録の数）, recordsFailed, fromSummary }
+// ==========================================
+const CHARAENO_OCCUPATION = {
+    edu20: 'EDU×20', edu10str10: 'STR×10+EDU×10', edu10con10: 'CON×10+EDU×10', edu10pow10: 'POW×10+EDU×10',
+    edu10dex10: 'DEX×10+EDU×10', edu10app10: 'APP×10+EDU×10', edu10siz10: 'SIZ×10+EDU×10', edu10int10: 'INT×10+EDU×10',
+};
+const CHARAENO_ABILITY_KEYS = ['str', 'con', 'pow', 'dex', 'app', 'siz', 'int', 'edu'];
+// Charaenoでの技能名 → 保管所での名前（違うものだけ）
+const CHARAENO_SKILL_ALIASES = { 'こぶし': 'こぶし（パンチ）', 'パンチ': 'こぶし（パンチ）', '組みつき': '組み付き' };
+
+// 技能名（かっこの前）から、保管所の基本技能を探す。{ cat, sk, index } か null
+function findDefaultSkill(head) {
+    const n = CHARAENO_SKILL_ALIASES[head] || head;
+    for (const cat of SKILL_CATEGORIES) {
+        const index = cat.skills.findIndex(sk => sk.hokan === n || sk.name === n);
+        if (index >= 0) return { cat, sk: cat.skills[index], index };
+    }
+    return null;
+}
+
+// 「運転（自動車）」→ { head: '運転', bunya: '自動車' }
+function splitSkillName(name) {
+    const n = str(name).replace(/\(/g, '（').replace(/\)/g, '）');
+    const m = n.match(/^(.+?)（(.*)）$/);
+    return m ? { head: m[1].trim(), bunya: m[2].trim() } : { head: n, bunya: '' };
+}
+
+// キャラッシュの自動計算の初期値（基本技能・分野つきの技能だけ。独自技能は null）
+function autoBaseOf(head, ab) {
+    const d = findDefaultSkill(head);
+    if (d) return typeof d.sk.base === 'function' ? d.sk.base(ab) : d.sk.base;
+    if (head === '母国語') return ab.EDU * 5;
+    if (head in SPECIALTY_SKILLS) return SPECIALTY_SKILLS[head];
+    if (LANGUAGE_NAMES.includes(head)) return 1;
+    return null;
+}
+
+// 要約（合計値だけ）を、内訳つきのデータと同じ形にする。初期値から増えた分は「その他」に入れる
+function summaryToDetail(s) {
+    const ch = s.characteristics || {};
+    const ab = {};
+    CHARAENO_ABILITY_KEYS.forEach((k, i) => { ab[ABILITY_NAMES[i]] = int(ch[k]); });
+    const at = s.attribute || {};
+    const addition = (value, auto) => ({ addition: value == null || value === '' ? 0 : int(value) - auto });
+    return Object.assign({}, s, {
+        characteristics: Object.fromEntries(CHARAENO_ABILITY_KEYS.map(k => [k, { base: int(ch[k]) }])),
+        attribute: {
+            hp: addition(at.hp, Math.ceil((ab.CON + ab.SIZ) / 2)),
+            mp: addition(at.mp, ab.POW),
+            san: at.san && typeof at.san === 'object' ? at.san.value : at.san,
+            luck: addition(at.luck, ab.POW * 5),
+            idea: addition(at.idea, ab.INT * 5),
+            know: addition(at.know, Math.min(ab.EDU * 5, 99)),
+            db: { value: str(at.db) },
+        },
+        skills: toArray(s.skills).map(sk => {
+            const total = int(sk.value);
+            const base = autoBaseOf(splitSkillName(sk.name).head, ab);
+            // 独自技能は初期値が分からないので、合計値をそのまま初期値にする
+            return base == null ? { name: sk.name, base: total, additionalSkill: true } : { name: sk.name, base, other: total - base };
+        }),
+        melees: [], firearms: [],
+        wapons: s.weapons,
+    });
+}
+
+function charaenoToSheet(detail, info) {
+    const c = detail || {};
+    const inf = info || {};
+    const data = { pc_name: str(c.name), data_title: '', pc_making_memo: str(c.note) ? c.note : '', pc_tags: '' };
+
+    // --- 能力値（元の値・年齢修正・その他の追加） ---
+    const ch = c.characteristics || {};
+    const ab = {};
+    const ageAdjust = [];
+    CHARAENO_ABILITY_KEYS.forEach((k, i) => {
+        const v = ch[k] && typeof ch[k] === 'object' ? ch[k] : { base: ch[k] };
+        const base = int(v.base), adj = int(v.ageAdjust), add = int(v.addition);
+        data['NA' + (i + 1)] = base;
+        data['NP' + (i + 1)] = base + adj + add;
+        ageAdjust.push(adj);
+        ab[ABILITY_NAMES[i]] = base + adj + add;
+    });
+    const at = c.attribute || {};
+    const addOf = k => int(at[k] && typeof at[k] === 'object' ? at[k].addition : 0);
+    const derived = [
+        Math.ceil((ab.CON + ab.SIZ) / 2) + addOf('hp'), ab.POW + addOf('mp'), ab.POW * 5,
+        ab.INT * 5 + addOf('idea'), ab.POW * 5 + addOf('luck'), Math.min(ab.EDU * 5, 99) + addOf('know'),
+    ];
+    derived.forEach((v, i) => { data['NA' + (i + 9)] = v; data['NP' + (i + 9)] = v; });
+    const san = at.san && typeof at.san === 'object' ? at.san.value : at.san;
+    data.SAN_Left = san == null || san === '' ? '' : int(san);
+    data.dmg_bonus = at.db && typeof at.db === 'object' ? str(at.db.value) : str(at.db);
+
+    // --- 職業P・興味P ---
+    let occFormula = '';
+    const sp = c.skillPoint;
+    if (sp) {
+        const type = sp.occupationType || 'edu20';
+        const formula = OCCUPATION_FORMULAS.find(([n]) => n === CHARAENO_OCCUPATION[type]);
+        if (formula) {
+            occFormula = formula[0];
+            data.TS_Maximum = formula[1](ab);
+        } else if (type === 'manual' && sp.occupationManualPoints != null) {
+            // 手入力の職業Pは「EDU×20 ＋ 補正」の形にする
+            occFormula = 'EDU×20';
+            data.TS_Maximum = int(sp.occupationManualPoints);
+        }
+        data.TS_Add = 0;
+        data.TK_Maximum = ab.INT * 10 + int(sp.interestAdditionalPoints);
+    }
+
+    // --- 技能 ---
+    // Charaenoの技能を1行ずつに並べる（分野のある技能は、分野ごとに1行）
+    const weaponNames = toArray(c.wapons || c.weapons).map(w => str(w && w.name)).filter(Boolean);
+    const rows = [];
+    const addRow = (sk, sub, group) => {
+        const v = sub || sk;
+        const parsed = splitSkillName(sk.name);
+        const r = {
+            head: parsed.head, bunya: sub ? str(sub.name) : parsed.bunya,
+            init: int(v.base), job: int(v.occupation), interest: int(v.interest), growth: int(v.growth), other: int(v.other),
+            checked: !!v.checked, additional: !!sk.additionalSkill, group,
+        };
+        r.touched = r.job !== 0 || r.interest !== 0 || r.growth !== 0 || r.other !== 0;
+        r.fullName = r.bunya ? `${r.head}（${r.bunya}）` : r.head;
+        rows.push(r);
+    };
+    [['skills', 'skill'], ['melees', 'melee'], ['firearms', 'firearm']].forEach(([key, group]) => {
+        toArray(c[key]).forEach(sk => {
+            if (!sk || !str(sk.name)) return;
+            const subs = toArray(sk.subdivision);
+            if (subs.length) subs.forEach(sub => addRow(sk, sub, group));
+            else addRow(sk, null, group);
+        });
+    });
+
+    // 基本技能の欄に入れる行を決める。分野のある技能（運転など）は、ポイントの入っている最初の行を入れ、
+    // ほかにポイントの入っている行があれば追加技能にする。ポイントの入っていない残りの行は入れない
+    const slot = new Map();
+    const used = new Set();
+    SKILL_CATEGORIES.forEach(cat => cat.skills.forEach(sk => {
+        const cands = rows.filter(r => !r.additional && !used.has(r) && findDefaultSkill(r.head) && findDefaultSkill(r.head).sk === sk && (sk.bunya || !r.bunya));
+        const pick = cands.find(r => r.touched) || cands[0];
+        if (pick) { slot.set(sk, pick); used.add(pick); }
+        cands.filter(r => r !== pick && !r.touched).forEach(r => used.add(r));
+    }));
+
+    // 追加技能を入れる分類：基本技能の仲間ならその分類、言語は交渉技能、
+    // 格闘・火器の追加と、武器と同じ名前の技能は戦闘技能、ほかは知識技能
+    const extraCat = r => {
+        const d = findDefaultSkill(r.head);
+        if (d) return d.cat.prefix;
+        if (r.head === '母国語' || LANGUAGE_NAMES.includes(r.head)) return 'TC';
+        if (r.group !== 'skill' || weaponNames.includes(r.fullName) || weaponNames.includes(r.head)) return 'TB';
+        if (r.head in SPECIALTY_SKILLS) return r.head === '芸術' ? 'TK' : 'TA';
+        return 'TK';
+    };
+    // 独自に追加した技能はポイントがなくても入れる。もともとある行でポイントのないものは入れない
+    const extras = rows.filter(r => !used.has(r) && (r.touched || r.additional));
+
+    SKILL_CATEGORIES.forEach(cat => {
+        const list = cat.skills.map(sk => {
+            const r = slot.get(sk);
+            if (sk.bunya) data[sk.bunya] = r ? r.bunya : '';
+            return r || { init: typeof sk.base === 'function' ? sk.base(ab) : sk.base, job: 0, interest: 0, growth: 0, other: 0 };
+        });
+        const ex = extras.filter(r => extraCat(r) === cat.prefix);
+        const all = [...list, ...ex];
+        const put = (key, f) => { data[cat.prefix + key] = all.map(f); };
+        put('AD', r => r.init); put('AS', r => r.job); put('AK', r => r.interest); put('AA', r => r.growth); put('AO', r => r.other);
+        put('AP', r => r.init + r.job + r.interest + r.growth + r.other);
+        put('AU', r => (r.checked ? '1' : ''));
+        data[cat.prefix + 'AName'] = ex.map(r => r.fullName);
+    });
+
+    // --- 武器・所持品 ---
+    const arms = toArray(c.wapons || c.weapons).filter(w => w && str(w.name));
+    const armsKeys = [['arms_name', 'name'], ['arms_hit', 'value'], ['arms_damage', 'damage'], ['arms_range', 'range'],
+        ['arms_attack_count', 'attacks'], ['arms_last_shot', 'ammo'], ['arms_malfunction', 'malfunction'], ['arms_vitality', 'hp']];
+    armsKeys.forEach(([k, ck]) => { data[k] = arms.map(w => str(w[ck])); });
+    const items = toArray(c.possessions).filter(p => p && str(p.name));
+    data.item_name = items.map(p => str(p.name));
+    data.item_num = items.map(p => str(p.count));
+    data.item_memo = items.map(p => str(p.detail));
+
+    // --- 基本情報 ---
+    data.shokugyo = str(c.occupation);
+    data.age = str(c.age);
+    data.sex = str(c.sex);
+    data.pc_kigen = str(c.birthplace);
+
+    const pd = c.personalData || {};
+    const cr = c.credit || {};
+    const joinLines = (...vs) => vs.map(str).filter(Boolean).join('\n');
+    const url = inf.id ? `https://charaeno.com/6th/${inf.id}` : '';
+
+    // 「この探索者の記録一覧」の公開の記録。タイトルは【】で囲むので、中の【】は［］にする
+    const memos = toArray(inf.records).filter(r => r && (str(r.title) || str(r.text))).map(r => ({
+        title: (str(r.title) || 'Charaenoの記録').replace(/【/g, '［').replace(/】/g, '］'),
+        body: str(r.text) ? r.text.toString().trim() : '',
+    }));
+
+    const warnings = [];
+    if (inf.fromSummary) warnings.push('技能の内訳を読み込めなかったので、初期値から増えた分を「その他」に入れました。');
+    if (inf.hiddenRecords) warnings.push(`パスワード認証・非公開の記録（${inf.hiddenRecords}件）は読み込めないため、移していません。`);
+    if (inf.failedRecords) warnings.push(`記録のうち${inf.failedRecords}件を読み込めなかったので、その記録は移していません。`);
+    if (inf.recordsFailed) warnings.push('「この探索者の記録一覧」を読み込めなかったので、記録は移していません。');
+
+    data._src = {
+        site: 'Charaeno',
+        ageAdjust,
+        occFormula,
+        free: [
+            ['学校・学位', c.degree], ['住所', pd.address], ['描写', pd.description], ['家族＆友人', pd.family],
+            ['収入', cr.income], ['手持ち現金', cr.cache != null ? cr.cache : cr.cash], ['預金', cr.deposit],
+            ['個人資産', cr.personalProperty], ['不動産', cr.realEstate], ['Charaeno', url],
+        ],
+        experience: [
+            ['書物・文献', c.mythosTomes], ['アーティファクト', c.artifactsAndSpells],
+            ['負傷・傷痕など', joinLines(pd.injuries, pd.scar)], ['心の傷', joinLines(c.mentalDisorder, pd.insanity)],
+            ['遭遇した存在', c.encounters],
+        ],
+        memos,
+        warnings,
+    };
+    return data;
+}
+
 // ファイル名に使えない文字を除く
 function safeFileName(name) {
     return (name || '名無し').replace(/[\\/:*?"<>|\r\n\t]/g, '_').slice(0, 60);
@@ -701,5 +976,5 @@ function safeFileName(name) {
 
 // Node.js でのテスト用（ブラウザでは何もしない）
 if (typeof module !== 'undefined') {
-    module.exports = { parseSheetKey, toArray, convertToCharash, splitNameKana, guessNameKana, convertHalfKana, parseTags, findTraits, mapExtraSkill, calcDamageBonus, safeFileName };
+    module.exports = { parseSheetKey, isCharaenoKey, sheetUrlOf, charaenoToSheet, summaryToDetail, toArray, convertToCharash, splitNameKana, guessNameKana, convertHalfKana, parseTags, findTraits, mapExtraSkill, calcDamageBonus, safeFileName };
 }

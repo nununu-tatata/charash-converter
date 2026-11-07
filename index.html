@@ -10,10 +10,10 @@
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>保管所→キャラッシュ変換ツール</title>
-    <meta name="description" content="キャラクター保管所（CoC6版）のキャラシを、キャラッシュの「インポート」で読み込めるテキストファイルに変換します。">
-    <meta property="og:title" content="保管所→キャラッシュ変換ツール">
-    <meta property="og:description" content="キャラクター保管所（CoC6版）のキャラシURLを貼るだけで、キャラッシュに取り込めるテキストファイルを作ります。マイリストから一括取得・何百件でもまとめて変換。">
+    <title>保管所・Charaeno→キャラッシュ変換ツール</title>
+    <meta name="description" content="キャラクター保管所・Charaeno（CoC6版）のキャラシを、キャラッシュの「インポート」で読み込めるテキストファイルに変換します。">
+    <meta property="og:title" content="保管所・Charaeno→キャラッシュ変換ツール">
+    <meta property="og:description" content="キャラクター保管所・Charaeno（CoC6版）のキャラシURLを貼るだけで、キャラッシュに取り込めるテキストファイルを作ります。マイリストから一括取得・何百件でもまとめて変換。">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://nununu-tatata.github.io/charash-converter/">
     <meta property="og:image" content="https://nununu-tatata.github.io/charash-converter/ogp.png">
@@ -33,8 +33,8 @@
     <div class="container">
         <header>
             <div class="header-left">
-                <h1>保管所→キャラッシュ変換ツール</h1>
-                <p class="subtitle">キャラクター保管所（CoC6版）のキャラシを、キャラッシュに取り込めるテキストファイルに変換します。規約等をご確認の上ご利用ください。</p>
+                <h1>保管所・Charaeno→キャラッシュ変換ツール</h1>
+                <p class="subtitle">キャラクター保管所・Charaeno（CoC6版）のキャラシを、キャラッシュに取り込めるテキストファイルに変換します。規約等をご確認の上ご利用ください。</p>
                 <div class="related-links">
                     <span class="related-label">他のツールはこちら→</span>
                     <a href="https://nununu-tatata.github.io/nukotaya-tools/" target="_blank" class="related-link">🎲ぬこた屋ツールズ <span style="font-size:10px;">↗</span></a>
@@ -118,16 +118,16 @@
                 <p>みなさんの声に合わせて、アップデートしていきます。キャラシが多い方は、<b>まず数名分で試してから</b>、全員を変換してください。</p>
                 <p>うまく変換できないキャラシや、ご要望があれば、お気軽に<a href="https://forms.gle/K2Lkdcw2akgnDvoVA" target="_blank">お問い合わせフォーム</a>からお送りください。</p>
             </div>
-            <p class="card-label">キャラクター保管所のキャラシURL（1行に1つ。何件でもまとめて貼り付けられます）</p>
+            <p class="card-label">キャラクター保管所・CharaenoのキャラシURL（1行に1つ。何件でもまとめて、混ぜて貼り付けられます）</p>
             <textarea id="url-input" class="url-input url-area" spellcheck="false"
-                placeholder="https://charasheet.vampire-blood.net/XXXXXXX&#10;https://charasheet.vampire-blood.net/mXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"></textarea>
+                placeholder="https://charasheet.vampire-blood.net/XXXXXXX&#10;https://charasheet.vampire-blood.net/mXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX&#10;https://charaeno.com/6th/XXXXXXXXXXXXXXXXXXXXX"></textarea>
             <div class="url-actions">
                 <span id="url-count" class="input-note"></span>
                 <button type="button" id="stop-btn" class="btn-sub" hidden>中止する</button>
                 <button type="button" id="convert-btn" class="btn-convert">変換する</button>
             </div>
             <p class="input-note">クトゥルフ神話TRPG 6版のキャラシのみ対応しています。公開しているキャラシだけ読み込めます。<br>
-                マイリストの全キャラのURLをまとめて取得する方法は「<a href="#bookmarklet">マイリストからURLをまとめて取得</a>」をご覧ください。</p>
+                保管所のマイリスト・Charaenoのリストにある全キャラのURLをまとめて取得する方法は「<a href="#bookmarklet">リストからURLをまとめて取得</a>」をご覧ください。</p>
 
             <div class="options">
                 <div class="opt-card">
@@ -159,7 +159,7 @@
                         <label><input type="radio" name="opt-memo" value="common" checked><span>共通メモ</span></label>
                         <label><input type="radio" name="opt-memo" value="system"><span>6版のシステム別メモ</span></label>
                     </div>
-                    <p class="opt-desc">共通メモはどのシステムのページにも出ます。システム別メモは6版のページにだけ出ます。</p>
+                    <p class="opt-desc">共通メモはどのシステムのページにも出ます。システム別メモは6版のページにだけ出ます。Charaenoの「この探索者の記録一覧」の記録も、同じところに入ります。</p>
                 </div>
                 <div class="opt-card">
                     <div class="opt-head">
@@ -215,15 +215,16 @@
             <ol class="steps">
                 <li class="step">
                     <p class="step-title">キャラシのURLを貼り付けて「変換する」を押す</p>
-                    <p>キャラクター保管所のキャラシのURLを、<b>1行に1つずつ</b>貼り付けます。何件でもまとめて貼り付けられます。</p>
-                    <p>マイリストの全キャラを変換したいときは、「<a href="#bookmarklet">マイリストからURLをまとめて取得</a>」を使うと、URLを1つずつコピーしなくて済みます。</p>
+                    <p>キャラクター保管所かCharaenoのキャラシのURLを、<b>1行に1つずつ</b>貼り付けます。何件でもまとめて貼り付けられます。保管所とCharaenoのURLを混ぜてもOKです。</p>
+                    <p>全キャラを変換したいときは、「<a href="#bookmarklet">リストからURLをまとめて取得</a>」を使うと、URLを1つずつコピーしなくて済みます。</p>
                     <div class="point-box">
                         <p class="point-title">⏱ 読み込みには少し時間がかかります</p>
                         <ul>
-                            <li>キャラクター保管所に負担をかけないよう、<b>1件ずつ間をあけて</b>読み込みます。</li>
-                            <li>目安は <b>100件で約2分</b>、<b>300件で約6分</b>です。</li>
-                            <li><b>300件を超えるとき</b>は、さらにゆっくり（2秒に1件）読み込みます。500件で約17分です。</li>
-                            <li>保管所が混み合っているときは、少し待って<b>自動でやり直します</b>。読み込み中は、このページを開いたままにしてください。</li>
+                            <li>キャラクター保管所・Charaenoに負担をかけないよう、<b>1件ずつ間をあけて</b>読み込みます。</li>
+                            <li>保管所のキャラシは、目安で <b>100件で約2分</b>、<b>300件で約6分</b>です。</li>
+                            <li>保管所のキャラシが<b>300件を超えるとき</b>は、さらにゆっくり（2秒に1件）読み込みます。500件で約17分です。</li>
+                            <li>Charaenoのキャラシは、キャラシと記録一覧を読み込むので、<b>100件で約4分</b>です（公開の記録があれば、その分少し長くなります）。</li>
+                            <li>混み合っているときは、少し待って<b>自動でやり直します</b>。読み込み中は、このページを開いたままにしてください。</li>
                         </ul>
                     </div>
                 </li>
@@ -262,7 +263,7 @@
             <h2 class="section-title">変換される内容</h2>
             <div class="table-wrap">
                 <table class="map-table">
-                    <tr><th>キャラクター保管所</th><th>キャラッシュ</th></tr>
+                    <tr><th>キャラシ</th><th>キャラッシュ</th></tr>
                     <tr><td>能力値（STR〜EDU）</td><td>能力値。作成時の値を「元の値」に、成長・特徴表などで増えた分を「その他」に入れます</td></tr>
                     <tr><td>HP・MP・アイデア・幸運・知識・DB</td><td>キャラッシュの自動計算と同じ値なら自動計算のまま、違えばその値で固定します</td></tr>
                     <tr><td>現在SAN</td><td>SAN補正（現在SAN − POW×5）</td></tr>
@@ -275,7 +276,20 @@
                     <tr><td>プロフィール</td><td>名前・かな・職業・年齢・性別・出身・身長・体重・髪の色・瞳の色・タグ</td></tr>
                     <tr><td>肌の色・所持金・預金/借金</td><td>自由項目</td></tr>
                     <tr><td>メモ</td><td>共通メモか、システム別メモ（選べます）</td></tr>
-                    <tr><td>キャラシのURL</td><td>自由項目「キャラクター保管所」</td></tr>
+                    <tr><td>キャラシのURL</td><td>自由項目「キャラクター保管所」または「Charaeno」</td></tr>
+                </table>
+            </div>
+            <h3 class="sub-title">Charaenoのキャラシで、ほかに入るもの</h3>
+            <div class="table-wrap">
+                <table class="map-table">
+                    <tr><th>Charaeno</th><th>キャラッシュ</th></tr>
+                    <tr><td>能力値の年齢による増減</td><td>能力値の「増減」</td></tr>
+                    <tr><td>この探索者の記録一覧</td><td><b>公開の記録</b>を1件ずつ、タイトルつきの別のメモにします。<b>パスワード認証・非公開の記録は読み込めないため、移せません</b></td></tr>
+                    <tr><td>読んだ魔導書・アーティファクト／呪文・遭遇した超自然の存在</td><td>6版の経験の記録（書物・文献／アーティファクト／遭遇した存在）</td></tr>
+                    <tr><td>負傷・傷跡など・精神的な障害・狂気の症状</td><td>6版の経験の記録（負傷・傷痕など／心の傷）</td></tr>
+                    <tr><td>学校・学位・住所・描写・家族＆友人</td><td>自由項目</td></tr>
+                    <tr><td>収入・手持ち現金・預金・個人資産・不動産</td><td>自由項目</td></tr>
+                    <tr><td>武器の故障</td><td>武器の故障NO</td></tr>
                 </table>
             </div>
             <p class="section-desc" style="margin-top:8px;">画像・チャットパレットは変換されません。採用ルールは、特徴表が見つかったときだけ「クトゥルフ2015」「探索者の特徴」を入れます（それ以外のときは変えません）。取り込んだあとにキャラッシュで設定してください。</p>
@@ -283,8 +297,8 @@
 
         <!-- ===== ブックマークレット ===== -->
         <section class="section" id="bookmarklet">
-            <h2 class="section-title">マイリストからURLをまとめて取得</h2>
-            <p class="section-desc">キャラクター保管所のマイリストにある全キャラのURLを、ボタン一つでコピーできます。（パソコンのブラウザ向け）</p>
+            <h2 class="section-title">リストからURLをまとめて取得</h2>
+            <p class="section-desc">キャラクター保管所のマイリスト、またはCharaenoのリスト（探索者一覧）にある全キャラのURLを、ボタン一つでコピーできます。（パソコンのブラウザ向け）</p>
             <ol class="steps">
                 <li class="step">
                     <p class="step-title">最初に一度だけ：ブックマークに登録</p>
@@ -301,12 +315,12 @@
                         <textarea id="bookmarklet-code" class="code-area" readonly></textarea>
                         <button class="btn-sub" id="bookmarklet-copy">コードをコピー</button>
                     </details>
-                    <p>※CoCキャラシ保管スプレッドシートで登録した「キャラシURL抽出」も、そのまま使えます。</p>
+                    <p>※CoCキャラシ保管スプレッドシートや、以前このページで登録した「キャラシURL抽出」は、キャラクター保管所でだけ使えます。Charaenoでも使うときは、上のボタンで登録し直してください。</p>
                 </li>
                 <li class="step">
-                    <p class="step-title">マイリストで実行する</p>
-                    <p>キャラクター保管所に<b>ログイン</b>して、<a href="https://charasheet.vampire-blood.net/mylist" target="_blank">マイリスト</a>を開きます。</p>
-                    <p>ブックマークバーの「<b>キャラシURL抽出</b>」を押すと、全ページを読み込んでURLの一覧が出てきます。</p>
+                    <p class="step-title">リストのページで実行する</p>
+                    <p><b>キャラクター保管所：</b><b>ログイン</b>して、<a href="https://charasheet.vampire-blood.net/mylist" target="_blank">マイリスト</a>を開きます。「<b>キャラシURL抽出</b>」を押すと、全ページを読み込んでURLの一覧が出てきます。</p>
+                    <p><b>Charaeno：</b><b>ログイン</b>して、<a href="https://charaeno.com/list" target="_blank">リスト（探索者一覧）</a>を開きます。「<b>キャラシURL抽出</b>」を押すと、<b>6版のキャラシだけ</b>のURLの一覧が出てきます（7版のキャラシは入りません）。</p>
                 </li>
                 <li class="step">
                     <p class="step-title">このページに貼り付ける</p>
@@ -316,7 +330,7 @@
             <div class="note-box">
                 非公開にしているキャラシと、6版以外のキャラシは変換できません（一覧に理由が表示されます）。<br>
                 <b>不要になったら：</b>ブックマークバーの「キャラシURL抽出」を右クリックして「<b>削除</b>」を選ぶと消せます。<br>
-                このブックマークは、マイリストを開いて押したときだけ動きます。他のページで勝手に動いたり、情報を外部に送ったりすることはありません。
+                このブックマークは、保管所のマイリストか、Charaenoのリストを開いて押したときだけ動きます。他のページで勝手に動いたり、情報を外部に送ったりすることはありません。
             </div>
         </section>
 
@@ -327,8 +341,16 @@
                 <summary>「非公開に設定されているか、削除された可能性があります」と表示されます</summary>
                 <div class="answer">
                     <p>キャラクター保管所で<b>非公開</b>にしているキャラシは読み込めません。非公開のキャラシは、ログインしている本人しか見られないためです。マイリストからURLをまとめて取得すると、非公開のキャラシも入るので、この表示が出ます。</p>
+                    <p>Charaenoのキャラシで「見つかりませんでした」と出るときは、キャラシが削除されたか、URLが間違っている可能性があります。</p>
                     <p>読み込みたいときは、キャラクター保管所でキャラシを公開に切り替えてから、「<b>読み込めなかったものをもう一度</b>」を押してください。URLが正しいか、キャラシが削除されていないかも確認してください。</p>
                     <p>公開しているのにこの表示が出るときは、保管所が混み合っていることがあります。少し時間をおいて、もう一度お試しください。</p>
+                </div>
+            </details>
+            <details>
+                <summary>Charaenoの記録が、一部しか移っていません</summary>
+                <div class="answer">
+                    <p>「この探索者の記録一覧」のうち、移せるのは<b>公開の記録だけ</b>です。<b>パスワード認証</b>と<b>非公開</b>の記録は、このツールからは読み込めないため移せません（一覧に件数が表示されます）。</p>
+                    <p>移したいときは、Charaenoで記録を公開に切り替えてから変換し直すか、キャラッシュに取り込んだあとで、メモに書き写してください。</p>
                 </div>
             </details>
             <details>
@@ -339,28 +361,28 @@
                 </div>
             </details>
             <details>
-                <summary>保管所でキャラシを直したのに、変換結果が古いままです</summary>
+                <summary>保管所やCharaenoでキャラシを直したのに、変換結果が古いままです</summary>
                 <div class="answer">
-                    <p>キャラクター保管所への負荷を減らすため、このページを開いているあいだは、一度読み込んだキャラシを読み込み直しません。</p>
-                    <p>保管所でキャラシを直したときは、このページを再読み込み（<span class="key">F5</span>）してから変換してください。</p>
+                    <p>キャラクター保管所・Charaenoへの負荷を減らすため、このページを開いているあいだは、一度読み込んだキャラシを読み込み直しません。</p>
+                    <p>キャラシを直したときは、このページを再読み込み（<span class="key">F5</span>）してから変換してください。</p>
                 </div>
             </details>
             <details>
                 <summary>7版や他のシステムのキャラシは使えますか？</summary>
                 <div class="answer">
-                    <p>現在はクトゥルフ神話TRPG <b>6版</b>のキャラシのみ対応しています。</p>
+                    <p>現在はクトゥルフ神話TRPG <b>6版</b>のキャラシのみ対応しています。Charaenoの新クトゥルフ神話TRPG（7版）のキャラシも、まだ対応していません。</p>
                 </div>
             </details>
             <details>
                 <summary>キャラシのデータはどこかに送られますか？</summary>
                 <div class="answer">
-                    <p>送られません。このページは、あなたのブラウザの中でキャラクター保管所からキャラシを読み込み、その場で変換しています。変換したデータが制作者や他のサーバーに送られることはありません。</p>
+                    <p>送られません。このページは、あなたのブラウザの中でキャラクター保管所・Charaenoからキャラシを読み込み、その場で変換しています。変換したデータが制作者や他のサーバーに送られることはありません。</p>
                 </div>
             </details>
             <details>
                 <summary>取り込んだあと、数字がずれています</summary>
                 <div class="answer">
-                    <p>キャラクター保管所とキャラッシュでは、計算のしかたや採用ルール（2010／2015など）の扱いが違うことがあります。取り込んだあとに、キャラッシュで能力値・技能を確認してください。</p>
+                    <p>キャラクター保管所・Charaenoとキャラッシュでは、計算のしかたや採用ルール（2010／2015など）の扱いが違うことがあります。取り込んだあとに、キャラッシュで能力値・技能を確認してください。</p>
                     <p>ずれ方に決まりがありそうなときは、お問い合わせから教えていただけると助かります。</p>
                 </div>
             </details>
@@ -378,7 +400,7 @@
                 <p>
                     最終更新日：
                     <span id="last-updated" style="cursor:pointer; text-decoration:underline;" onclick="openModal('changelogModal')"
-                        title="更新履歴を見る">2026/11/06</span>
+                        title="更新履歴を見る">2026/11/07</span>
                 </p>
                 <p><span style="cursor:pointer; text-decoration:underline;" onclick="openModal('creditsModal')">Special
                         Thanks</span> | © 2026 ぬこた</p>
@@ -391,6 +413,14 @@
             <button class="modal-close-btn" onclick="closeModal('changelogModal')">×</button>
             <div class="modal-title">更新履歴</div>
             <div class="modal-body">
+                <div style="margin-bottom: 12px;">
+                    <div style="font-weight: 700;">v1.1.0（2026/11/07）</div>
+                    <ul>
+                        <li>Charaeno（6版）のキャラシに対応しました。ツール名を「保管所・Charaeno→キャラッシュ変換ツール」に変えました。</li>
+                        <li>Charaenoの「この探索者の記録一覧」の公開の記録を、メモとして移せるようにしました。</li>
+                        <li>「キャラシURL抽出」が、Charaenoのリストでも使えるようになりました。</li>
+                    </ul>
+                </div>
                 <div style="margin-bottom: 12px;">
                     <div style="font-weight: 700;">v1.0.0（2026/11/06）</div>
                     <ul><li>公開しました。</li></ul>
@@ -406,7 +436,7 @@
             <div class="modal-body">
                 <ul>
                     <li>本ツールは、制作者が個人の趣味の範囲で開発・公開している非公式ツールです。</li>
-                    <li>キャラクター保管所様、キャラッシュ様とは一切関係ありません。本ツールについて、各サイト様へのお問い合わせはご遠慮ください。</li>
+                    <li>キャラクター保管所様、Charaeno様、キャラッシュ様とは一切関係ありません。本ツールについて、各サイト様へのお問い合わせはご遠慮ください。</li>
                     <li>各サイトの仕様変更により、予告なく本ツールが利用できなくなる、または正しく変換できなくなる場合があります。</li>
                     <li>本ツールの利用によって生じた、いかなる損害・トラブル（データの消失、変換内容の誤り、予期せぬ動作等）についても、制作者は一切の責任を負いません。</li>
                     <li>本ツールは無料で提供されていますが、動作保証、および不具合修正や機能追加の義務を負うものではありません。</li>
@@ -416,7 +446,7 @@
                 <ul>
                     <li>キャラシの読み込みと変換は、すべてお使いのブラウザの中で行います。キャラシのデータが制作者や他のサーバーに送られることはありません。</li>
                     <li>変換できるのは、ご自身のキャラシ、または持ち主から許可を得たキャラシに限ってご利用ください。</li>
-                    <li>キャラクター保管所への負荷を避けるため、短時間に何度も変換するのはお控えください。</li>
+                    <li>キャラクター保管所・Charaenoへの負荷を避けるため、短時間に何度も変換するのはお控えください。</li>
                     <li>キャラシの書き方によっては、正しく変換されない項目があります。取り込んだあとに、キャラッシュで内容を確認・修正してください。</li>
                     <li>このページでは、利用状況を把握するためにGoogleアナリティクスを使用しています。収集するのはページの閲覧やボタンの操作（変換した件数など）の情報で、個人を特定する情報は収集しません。また、キャラシの中身が送られることはありません。</li>
                 </ul>
@@ -440,6 +470,7 @@
                     ツール連携・対応</h4>
                 <ul style="list-style: none; padding: 0;">
                     <li>・<a href="https://charasheet.vampire-blood.net/" target="_blank" style="color: var(--text-color);">キャラクター保管所 様</a></li>
+                    <li>・<a href="https://charaeno.com/" target="_blank" style="color: var(--text-color);">Charaeno 様</a></li>
                     <li>・<a href="https://charash.jp/" target="_blank" style="color: var(--text-color);">キャラッシュ 様</a></li>
                 </ul>
             </div>
