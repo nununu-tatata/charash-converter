@@ -601,9 +601,13 @@ function convertToCharash(data, options) {
     const autoOrFixed = (value, auto) => value === auto ? `${value} @自動` : `${value}`;
     push(fieldLine('HP', autoOrFixed(now[9], Math.ceil((ab.CON + ab.SIZ) / 2))));
     push(fieldLine('MP', autoOrFixed(now[10], ab.POW)));
-    // SAN：キャラッシュは「現在SAN = POW×5 + SAN補正」なので、補正 = 現在SAN − POW×5
+    // SAN：キャラッシュは「現在SAN = POW×5（ただしSAN最大まで） + SAN補正」なので、
+    // 補正 = 現在SAN − min(POW×5, SAN最大)。SAN最大 = 99 − クトゥルフ神話
+    // （クトゥルフ神話が高く、POW×5 がSAN最大を超えるキャラは、POW×5 で引くとずれる）
+    const mythos = skillTables.flatMap(t => t.rows).find(r => r.label === 'クトゥルフ神話');
+    const sanMax = Math.max(0, 99 - (mythos ? mythos.total : 0));
     const san = str(data.SAN_Left) !== '' ? int(data.SAN_Left) : now[11];
-    push(fieldLine('SAN補正', san - ab.POW * 5));
+    push(fieldLine('SAN補正', san - Math.min(ab.POW * 5, sanMax)));
     const db = normalizeDb(data.dmg_bonus);
     const dbAuto = calcDamageBonus(ab.STR + ab.SIZ);
     push(fieldLine('ダメージボーナス', str(data.dmg_bonus) === '' || db === dbAuto ? `${dbAuto} @自動` : str(data.dmg_bonus)));
